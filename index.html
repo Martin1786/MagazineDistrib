@@ -49,12 +49,13 @@
     <form id="settingsForm" method="dialog">
       <div class="dialog-head"><div><span class="eyebrow">DATA SOURCE</span><h2>Google Sheet</h2></div><button class="icon-button close-button" value="cancel" aria-label="Close">×</button></div>
       <p class="dialog-copy">Paste a Google Sheets link shared as “Anyone with the link can view.” Refresh imports the rows into this device for offline use.</p>
+      <p id="settingsLock" class="fine-print hidden">These settings are locked in Viewer mode. Switch to Admin to change them.</p>
       <label>Sheet link<input name="sheetLink" id="sheetLink" type="url" inputmode="url" placeholder="https://docs.google.com/spreadsheets/d/…"></label>
       <label>Sync web app URL (Apps Script)<input name="apiUrl" id="apiUrl" type="url" inputmode="url" placeholder="https://script.google.com/macros/s/…/exec"></label>
       <label>Admin code<input name="adminToken" id="adminToken" type="password" autocomplete="off"></label>
       <label>Your name<input name="adminName" id="adminName" maxlength="60" autocomplete="off"></label>
       <p class="fine-print">With a sync web app URL set, the app reads from and writes to the sheet through it. Edits are only accepted by the sheet when the admin code matches; the Admin switch alone is not security.</p>
-      <div class="dialog-actions"><button id="builtInButton" class="quiet-button" value="builtin">Use built-in data</button><button class="primary-button" value="save">Save link</button></div>
+      <div class="dialog-actions"><button id="builtInButton" class="quiet-button" value="builtin">Use built-in data</button><button id="saveSettingsButton" class="primary-button" value="save">Save link</button></div>
     </form>
   </dialog>
   <div id="printSheet" class="print-sheet" aria-hidden="true"></div>

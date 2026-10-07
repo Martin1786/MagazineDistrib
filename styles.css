@@ -133,3 +133,6 @@ body { margin: 0; min-height: 100vh; }
   .print-sheet td.box { width:auto; }
   .print-sheet td:last-child { width:auto; }
 }
+
+.dialog input:disabled { background:#f3f6f4; color:#8a9791; cursor:not-allowed; }
+.dialog button:disabled { opacity:.45; cursor:not-allowed; }

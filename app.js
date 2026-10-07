@@ -339,6 +339,10 @@ async function openSettings() {
   $('apiUrl').value = localStorage.getItem('mag-api-url') || API_FALLBACK;
   $('adminToken').value = localStorage.getItem('mag-admin-token') || '';
   $('adminName').value = localStorage.getItem('mag-admin-name') || '';
+  const locked = !admin;
+  ['sheetLink', 'apiUrl', 'adminToken', 'adminName'].forEach((id) => { $(id).disabled = locked; });
+  ['saveSettingsButton', 'builtInButton'].forEach((id) => { $(id).disabled = locked; });
+  $('settingsLock').classList.toggle('hidden', !locked);
   $('settingsDialog').showModal();
 }
 
