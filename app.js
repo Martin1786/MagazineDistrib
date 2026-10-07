@@ -1,3 +1,5 @@
+// DEFAULT_API comes from config.js; fall back to blank if that file hasn't loaded
+const API_FALLBACK = typeof DEFAULT_API === 'undefined' ? '' : DEFAULT_API;
 const AREAS = ['Waltham Chase', 'Shedfield', 'Shirrell Heath', 'Wickham', 'Extras'];
 const DEFAULT_SHEET = 'https://docs.google.com/spreadsheets/d/1XVUCnDLmZxF_S9SxugCNf88Tln-amZaL7c11SEnEUQI/edit?usp=sharing';
 const DB_NAME = 'magazine-distribution-pwa';
@@ -192,7 +194,7 @@ const normalize = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9
 function findColumn(headers, aliases) { return headers.findIndex((header) => aliases.includes(normalize(header))); }
 function toBool(value) { return ['true', 'yes', 'y', '1', 'x', 'checked', '✓', '✔'].includes(String(value || '').trim().toLowerCase()); }
 
-const apiUrl = () => (localStorage.getItem('mag-api-url') || DEFAULT_API || '').trim();
+const apiUrl = () => (localStorage.getItem('mag-api-url') || API_FALLBACK || '').trim();
 const adminName = () => localStorage.getItem('mag-admin-name') || 'Admin';
 const nextSortOrder = () => Math.max(0, ...records.map((r) => Number(r.sortOrder) || 0)) + 1;
 const setPref = (key, value) => value ? localStorage.setItem(key, value) : localStorage.removeItem(key);
@@ -334,7 +336,7 @@ function setStatus(text) { $('syncStatus').textContent = text; }
 
 async function openSettings() {
   $('sheetLink').value = localStorage.getItem('mag-sheet-link') || DEFAULT_SHEET;
-  $('apiUrl').value = localStorage.getItem('mag-api-url') || DEFAULT_API;
+  $('apiUrl').value = localStorage.getItem('mag-api-url') || API_FALLBACK;
   $('adminToken').value = localStorage.getItem('mag-admin-token') || '';
   $('adminName').value = localStorage.getItem('mag-admin-name') || '';
   $('settingsDialog').showModal();
