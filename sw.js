@@ -1,4 +1,4 @@
-const CACHE_NAME = 'magazine-distribution-v8'; // bump this on every release
+const CACHE_NAME = 'magazine-distribution-v9'; // bump this on every release
 const APP_FILES = ['./', './index.html', './styles.css', './app.js', './config.js', './manifest.webmanifest', './assets/icon.svg', './assets/magazine-distribution-seed.json'];
 
 self.addEventListener('install', (event) => {
