@@ -26,7 +26,7 @@
     <nav id="parishTabs" class="parish-tabs" aria-label="Parish areas"></nav>
     <section class="section-heading">
       <div><h1 id="parishTitle">Waltham Chase</h1><span id="routeCount" class="route-count"></span></div>
-      <button id="addButton" class="primary-button hidden"><span>＋</span> Add route</button>
+      <div class="heading-actions"><button id="newIssueButton" class="quiet-button hidden">New issue</button><button id="addButton" class="primary-button hidden"><span>＋</span> Add route</button></div>
     </section>
     <section id="routeList" class="route-list" aria-live="polite"></section>
     <footer class="footer-note">Changes are saved on this device and work offline.</footer>
@@ -49,7 +49,10 @@
       <div class="dialog-head"><div><span class="eyebrow">DATA SOURCE</span><h2>Google Sheet</h2></div><button class="icon-button close-button" value="cancel" aria-label="Close">×</button></div>
       <p class="dialog-copy">Paste a Google Sheets link shared as “Anyone with the link can view.” Refresh imports the rows into this device for offline use.</p>
       <label>Sheet link<input name="sheetLink" id="sheetLink" type="url" inputmode="url" placeholder="https://docs.google.com/spreadsheets/d/…"></label>
-      <p class="fine-print">The current link is read-only. Admin changes stay on this device until a secure write connection is added. The Admin switch is a preview only, not a password-protected account.</p>
+      <label>Sync web app URL (Apps Script)<input name="apiUrl" id="apiUrl" type="url" inputmode="url" placeholder="https://script.google.com/macros/s/…/exec"></label>
+      <label>Admin code<input name="adminToken" id="adminToken" type="password" autocomplete="off"></label>
+      <label>Your name<input name="adminName" id="adminName" maxlength="60" autocomplete="off"></label>
+      <p class="fine-print">With a sync web app URL set, the app reads from and writes to the sheet through it. Edits are only accepted by the sheet when the admin code matches; the Admin switch alone is not security.</p>
       <div class="dialog-actions"><button id="builtInButton" class="quiet-button" value="builtin">Use built-in data</button><button class="primary-button" value="save">Save link</button></div>
     </form>
   </dialog>

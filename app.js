@@ -1,5 +1,6 @@
 const AREAS = ['Waltham Chase', 'Shedfield', 'Shirrell Heath', 'Wickham', 'Extras'];
 const DEFAULT_SHEET = 'https://docs.google.com/spreadsheets/d/1XVUCnDLmZxF_S9SxugCNf88Tln-amZaL7c11SEnEUQI/edit?usp=sharing';
+const DEFAULT_API = 'https://script.google.com/macros/s/AKfycbxWEEKvsvZGtYEYb6L41Cg4z-rXb37Rz2J2ycympa2Vc4p3hKX0aIjIRHujVzkag8g/exec'; // paste your Apps Script /exec URL here, or enter it in Settings
 const DB_NAME = 'magazine-distribution-pwa';
 const DB_VERSION = 1;
 let db;
@@ -52,9 +53,9 @@ async function initialize() {
     const response = await fetch('assets/magazine-distribution-seed.json');
     const seed = await response.json();
     const tx = db.transaction(['records', 'meta'], 'readwrite');
-    for (const row of seed.rows) {
+    for (const [order, row] of seed.rows.entries()) {
       const [id, parish, route, distributor, initials, numberOfMags, collectedFromChurch] = row;
-      tx.objectStore('records').put({ id, issueMonth: seed.issueMonth, parish, route, distributor, initials, numberOfMags, collectedFromChurch, updatedBy: '', updatedDate: '', dirty: false });
+      tx.objectStore('records').put({ id, issueMonth: seed.issueMonth, parish, route, distributor, initials, numberOfMags, collectedFromChurch, sortOrder: order + 1, updatedBy: '', updatedDate: '', dirty: false });
     }
     tx.objectStore('meta').put({ key: 'seeded', value: true });
     await new Promise((resolve, reject) => { tx.oncomplete = resolve; tx.onerror = () => reject(tx.error); });
@@ -63,7 +64,7 @@ async function initialize() {
 }
 
 async function reload() {
-  records = (await getAll('records')).sort((a, b) => AREAS.indexOf(a.parish) - AREAS.indexOf(b.parish) || a.route.localeCompare(b.route));
+  records = (await getAll('records')).sort((a, b) => AREAS.indexOf(a.parish) - AREAS.indexOf(b.parish) || (a.sortOrder ?? 1e9) - (b.sortOrder ?? 1e9) || a.route.localeCompare(b.route));
   render();
 }
 
@@ -72,6 +73,7 @@ function render() {
   $('modeLabel').textContent = admin ? 'Admin' : 'Viewer';
   $('modeIcon').textContent = admin ? '✎' : '◉';
   $('addButton').classList.toggle('hidden', !admin);
+  $('newIssueButton').classList.toggle('hidden', !admin);
   $('parishTabs').innerHTML = AREAS.map((area) => `<button class="tab ${area === selectedArea ? 'active' : ''}" data-area="${escapeHtml(area)}">${escapeHtml(area)}</button>`).join('');
   $('parishTabs').querySelectorAll('.tab').forEach((button) => button.addEventListener('click', () => { selectedArea = button.dataset.area; render(); }));
   const filtered = records.filter((record) => record.parish === selectedArea);
@@ -101,13 +103,14 @@ async function saveRecord(record) {
   await transaction('records', 'readwrite', (store) => store.put(record));
   await transaction('outbox', 'readwrite', (store) => store.put({ id: record.id, operation: 'upsert', payload: record, changedAt: new Date().toISOString() }));
   await reload();
+  scheduleSync();
 }
 
 async function toggleCollected(id, value) {
   const record = records.find((item) => item.id === id);
   if (!record) return;
   record.collectedFromChurch = value;
-  record.updatedBy = 'Admin';
+  record.updatedBy = adminName();
   record.updatedDate = new Date().toISOString();
   await saveRecord(record);
 }
@@ -119,6 +122,7 @@ async function deleteRecord(id) {
   await transaction('outbox', 'readwrite', (store) => store.put({ id, operation: 'delete', payload: record, changedAt: new Date().toISOString() }));
   await reload();
   showToast('Route removed from this device.');
+  scheduleSync();
 }
 
 function openEditor(id = null) {
@@ -141,7 +145,7 @@ async function submitRecord(event) {
   if (!$('recordForm').reportValidity()) return;
   const previous = editId ? records.find((item) => item.id === editId) : null;
   const now = new Date().toISOString();
-  const record = { id: previous?.id || `local-${crypto.randomUUID()}`, issueMonth: previous?.issueMonth || new Date().toISOString().slice(0, 7), parish: $('recordParish').value, route: $('recordRoute').value.trim(), distributor: $('recordDistributor').value.trim(), initials: $('recordInitials').value.trim(), numberOfMags: Number($('recordCount').value), collectedFromChurch: $('recordCollected').checked, updatedBy: 'Admin', updatedDate: now };
+  const record = { id: previous?.id || `local-${crypto.randomUUID()}`, issueMonth: previous?.issueMonth || new Date().toISOString().slice(0, 7), parish: $('recordParish').value, route: $('recordRoute').value.trim(), distributor: $('recordDistributor').value.trim(), initials: $('recordInitials').value.trim(), numberOfMags: Number($('recordCount').value), collectedFromChurch: $('recordCollected').checked, sortOrder: previous?.sortOrder ?? nextSortOrder(), updatedBy: adminName(), updatedDate: now };
   await saveRecord(record);
   selectedArea = record.parish;
   $('recordDialog').close();
@@ -176,44 +180,65 @@ const normalize = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9
 function findColumn(headers, aliases) { return headers.findIndex((header) => aliases.includes(normalize(header))); }
 function toBool(value) { return ['true', 'yes', 'y', '1', 'x', 'checked', '✓', '✔'].includes(String(value || '').trim().toLowerCase()); }
 
-async function refreshSheet() {
+const apiUrl = () => (localStorage.getItem('mag-api-url') || DEFAULT_API || '').trim();
+const adminName = () => localStorage.getItem('mag-admin-name') || 'Admin';
+const nextSortOrder = () => Math.max(0, ...records.map((r) => Number(r.sortOrder) || 0)) + 1;
+const setPref = (key, value) => value ? localStorage.setItem(key, value) : localStorage.removeItem(key);
+let syncTimer, syncing = false;
+
+async function fetchCsvRows() {
   const link = localStorage.getItem('mag-sheet-link') || DEFAULT_SHEET;
+  const response = await fetch(sheetCsvUrl(link), { cache: 'no-store', mode: 'cors' });
+  if (!response.ok) throw new Error(`Sheet returned ${response.status}`);
+  const rows = parseCsv(await response.text());
+  const aliases = rows.map((row) => row.map(normalize));
+  const headerIndex = aliases.findIndex((headers) => findColumn(headers, ['parish', 'parisharea']) >= 0 && findColumn(headers, ['route', 'distributionroute']) >= 0 && findColumn(headers, ['numberofmags', 'numberofmagazines', 'magazines', 'count']) >= 0);
+  if (headerIndex < 0) throw new Error('Required Parish, Route and Number of mags headers were not found.');
+  const headers = aliases[headerIndex];
+  const col = (names) => findColumn(headers, names);
+  const c = { parish: col(['parish','parisharea']), route: col(['route','distributionroute']), distributor: col(['distributor']), initials: col(['initials']), count: col(['numberofmags','numberofmagazines','magazines','count']), collected: col(['collectedfromchurch','collected']), updatedBy: col(['updatedby']), updatedDate: col(['updateddate','updatedat']), id: col(['id','recordid']), issue: col(['issuemonth','issue']), order: col(['sortorder','order']) };
+  return rows.slice(headerIndex + 1).map((row, i) => {
+    const at = (index) => index < 0 ? '' : row[index] || '';
+    const parish = at(c.parish), route = at(c.route), count = Number(String(at(c.count)).replaceAll(',', ''));
+    if (!parish || !route || !Number.isFinite(count)) return null;
+    const distributor = at(c.distributor), initials = at(c.initials);
+    const key = [parish, route, distributor, initials].join('|').toLowerCase();
+    return { id: at(c.id) || `sheet-${hash(key)}`, parish, route, distributor, initials, numberOfMags: count, collectedFromChurch: toBool(at(c.collected)), sortOrder: Number(at(c.order)) || i + 1, updatedBy: at(c.updatedBy), updatedDate: at(c.updatedDate), issueMonth: at(c.issue) || new Date().toISOString().slice(0,7), dirty: false };
+  }).filter(Boolean);
+}
+
+async function fetchRemote() {
+  if (!apiUrl()) return fetchCsvRows();
+  const res = await fetch(apiUrl(), { cache: 'no-store' });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || 'Script error');
+  return data.rows.map((r, i) => ({
+    id: String(r.id), parish: String(r.parish).trim(), route: String(r.route).trim(),
+    distributor: String(r.distributor || '').trim(), initials: String(r.initials || '').trim(),
+    numberOfMags: Number(r.numberOfMags) || 0,
+    collectedFromChurch: r.collectedFromChurch === true || toBool(r.collectedFromChurch),
+    sortOrder: Number(r.sortOrder) || i + 1,
+    issueMonth: String(r.issueMonth || '').slice(0, 7) || new Date().toISOString().slice(0, 7),
+    updatedBy: String(r.updatedBy || ''), updatedDate: String(r.updatedDate || ''), dirty: false
+  }));
+}
+
+async function refreshSheet() {
   if (!navigator.onLine) { setStatus('Offline · saved list available'); showToast('You are offline. Your saved list is available.'); return; }
   $('refreshButton').classList.add('spinning');
   setStatus('Refreshing sheet…');
   try {
-    const response = await fetch(sheetCsvUrl(link), { cache: 'no-store', mode: 'cors' });
-    if (!response.ok) throw new Error(`Sheet returned ${response.status}`);
-    const rows = parseCsv(await response.text());
-    const aliases = rows.map((row) => row.map(normalize));
-    const headerIndex = aliases.findIndex((headers) => findColumn(headers, ['parish', 'parisharea']) >= 0 && findColumn(headers, ['route', 'distributionroute']) >= 0 && findColumn(headers, ['numberofmags', 'numberofmagazines', 'magazines', 'count']) >= 0);
-    if (headerIndex < 0) throw new Error('Required Parish, Route and Number of mags headers were not found.');
-    const headers = aliases[headerIndex];
-    const col = (names) => findColumn(headers, names);
-    const c = { parish: col(['parish','parisharea']), route: col(['route','distributionroute']), distributor: col(['distributor']), initials: col(['initials']), count: col(['numberofmags','numberofmagazines','magazines','count']), collected: col(['collectedfromchurch','collected']), updatedBy: col(['updatedby']), updatedDate: col(['updateddate','updatedat']), id: col(['id','recordid']), issue: col(['issuemonth','issue']) };
-    const remote = rows.slice(headerIndex + 1).map((row) => {
-      const at = (index) => index < 0 ? '' : row[index] || '';
-      const parish = at(c.parish), route = at(c.route), count = Number(String(at(c.count)).replaceAll(',', ''));
-      if (!parish || !route || !Number.isFinite(count)) return null;
-      const distributor = at(c.distributor), initials = at(c.initials);
-      const key = [parish, route, distributor, initials].join('|').toLowerCase();
-      return { id: at(c.id) || `sheet-${hash(key)}`, parish, route, distributor, initials, numberOfMags: count, collectedFromChurch: toBool(at(c.collected)), updatedBy: at(c.updatedBy), updatedDate: at(c.updatedDate), issueMonth: at(c.issue) || new Date().toISOString().slice(0,7), dirty: false };
-    }).filter(Boolean);
+    const remote = await fetchRemote();
     if (!remote.length) throw new Error('No usable data rows found in the sheet.');
     const outbox = await getAll('outbox');
-    const dirtyIds = new Set(outbox.map((item) => item.id));
-    const deletedKeys = new Set(outbox.filter((item) => item.operation === 'delete' && item.payload).map((item) => naturalKey(item.payload)));
     const local = await getAll('records');
-    const byKey = new Map(local.map((item) => [naturalKey(item), item]));
-    const remoteKeys = new Set(remote.map(naturalKey));
+    const dirtyIds = new Set(outbox.map((item) => item.id));
+    const dirtyKeys = new Set(local.filter((r) => r.dirty || dirtyIds.has(r.id)).map(naturalKey));
     const tx = db.transaction('records', 'readwrite');
     const store = tx.objectStore('records');
     for (const item of local) if (!item.dirty && !dirtyIds.has(item.id)) store.delete(item.id);
     for (const item of remote) {
-      if (deletedKeys.has(naturalKey(item))) continue;
-      const old = byKey.get(naturalKey(item));
-      if (old && (old.dirty || dirtyIds.has(old.id))) continue;
-      item.id = old?.id || item.id;
+      if (dirtyIds.has(item.id) || dirtyKeys.has(naturalKey(item))) continue; // keep unsynced local edits and deletions
       store.put(item);
     }
     await new Promise((resolve, reject) => { tx.oncomplete = resolve; tx.onerror = () => reject(tx.error); });
@@ -226,20 +251,100 @@ async function refreshSheet() {
   } finally { $('refreshButton').classList.remove('spinning'); }
 }
 
+async function pushOutbox() {
+  const outbox = await getAll('outbox');
+  if (!outbox.length) return;
+  const token = localStorage.getItem('mag-admin-token');
+  if (!token) throw new Error('Enter the admin code in settings to sync your edits.');
+  setStatus(`Sending ${outbox.length} edit${outbox.length === 1 ? '' : 's'}…`);
+  const res = await fetch(apiUrl(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // avoids a CORS preflight
+    body: JSON.stringify({ token, changes: outbox.map((o) => ({ operation: o.operation, record: o.payload })) })
+  });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || 'Sync rejected');
+  // clear only what was sent; keep anything edited again while the request ran
+  const tx = db.transaction(['outbox', 'records'], 'readwrite');
+  for (const item of outbox) {
+    const req = tx.objectStore('outbox').get(item.id);
+    req.onsuccess = () => {
+      if (req.result?.changedAt !== item.changedAt) return;
+      tx.objectStore('outbox').delete(item.id);
+      if (item.operation === 'upsert') {
+        const r = tx.objectStore('records').get(item.id);
+        r.onsuccess = () => { if (r.result) { r.result.dirty = false; tx.objectStore('records').put(r.result); } };
+      }
+    };
+  }
+  await new Promise((resolve, reject) => { tx.oncomplete = resolve; tx.onerror = () => reject(tx.error); });
+}
+
+async function syncNow() {
+  if (syncing) return;
+  syncing = true;
+  try {
+    if (apiUrl() && navigator.onLine) {
+      try { await pushOutbox(); } catch (e) { setStatus('Sync failed · edits kept on device'); showToast(e.message); return; }
+    }
+    await refreshSheet();
+  } finally { syncing = false; }
+}
+
+function scheduleSync() {
+  if (!apiUrl() || !navigator.onLine) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncNow, 1500);
+}
+
+async function newIssue() {
+  const d = new Date(); d.setMonth(d.getMonth() + 1);
+  const month = prompt('Start a new issue. Month (YYYY-MM):', d.toISOString().slice(0, 7));
+  if (!month) return;
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month.trim())) { showToast('Please use the format YYYY-MM, e.g. 2026-11.'); return; }
+  if (!confirm(`Set every route to ${month.trim()} and untick all "Collected from church" boxes?`)) return;
+  const now = new Date().toISOString();
+  const tx = db.transaction(['records', 'outbox'], 'readwrite');
+  for (const r of records) {
+    Object.assign(r, { issueMonth: month.trim(), collectedFromChurch: false, updatedBy: adminName(), updatedDate: now, dirty: true });
+    tx.objectStore('records').put(r);
+    tx.objectStore('outbox').put({ id: r.id, operation: 'upsert', payload: r, changedAt: now });
+  }
+  await new Promise((resolve, reject) => { tx.oncomplete = resolve; tx.onerror = () => reject(tx.error); });
+  await reload();
+  showToast('New issue started.');
+  scheduleSync();
+}
+
 function hash(value) { let hash = 2166136261; for (let i = 0; i < value.length; i++) hash = Math.imul(hash ^ value.charCodeAt(i), 16777619); return (hash >>> 0).toString(16); }
 function naturalKey(item) { return [item.parish, item.route, item.distributor || '', item.initials || ''].map((v) => String(v).trim().toLowerCase().replace(/[^a-z0-9]/g, '')).join('|'); }
 function setStatus(text) { $('syncStatus').textContent = text; }
 
 async function openSettings() {
   $('sheetLink').value = localStorage.getItem('mag-sheet-link') || DEFAULT_SHEET;
+  $('apiUrl').value = localStorage.getItem('mag-api-url') || DEFAULT_API;
+  $('adminToken').value = localStorage.getItem('mag-admin-token') || '';
+  $('adminName').value = localStorage.getItem('mag-admin-name') || '';
   $('settingsDialog').showModal();
 }
 
 function bindEvents() {
-  $('refreshButton').addEventListener('click', refreshSheet);
+  $('refreshButton').addEventListener('click', syncNow);
+  $('newIssueButton').addEventListener('click', newIssue);
   $('settingsButton').addEventListener('click', openSettings);
   $('addButton').addEventListener('click', () => openEditor());
   $('modeButton').addEventListener('click', () => {
+    if (!admin) {
+      if (apiUrl() && !localStorage.getItem('mag-admin-token')) {
+        const code = prompt('Enter the admin code:');
+        if (!code) return;
+        localStorage.setItem('mag-admin-token', code.trim());
+      }
+      if (!localStorage.getItem('mag-admin-name')) {
+        const name = prompt('Your name (shown as "Updated by"):');
+        if (name) localStorage.setItem('mag-admin-name', name.trim());
+      }
+    }
     admin = !admin;
     localStorage.setItem('mag-admin-mode', String(admin));
     render();
@@ -249,9 +354,12 @@ function bindEvents() {
   $('settingsForm').addEventListener('submit', (event) => {
     if (event.submitter?.value !== 'save') return;
     event.preventDefault();
-    localStorage.setItem('mag-sheet-link', $('sheetLink').value.trim());
+    setPref('mag-sheet-link', $('sheetLink').value.trim());
+    setPref('mag-api-url', $('apiUrl').value.trim());
+    setPref('mag-admin-token', $('adminToken').value.trim());
+    setPref('mag-admin-name', $('adminName').value.trim());
     $('settingsDialog').close();
-    refreshSheet();
+    syncNow();
   });
   $('builtInButton').addEventListener('click', (event) => {
     event.preventDefault();
@@ -260,7 +368,7 @@ function bindEvents() {
     setStatus('Built-in data · offline ready');
     showToast('Using the built-in October 2026 list.');
   });
-  window.addEventListener('online', refreshSheet);
+  window.addEventListener('online', syncNow);
 }
 
 async function start() {
@@ -269,7 +377,7 @@ async function start() {
     await initialize();
     const dirty = await getAll('outbox');
     setStatus(dirty.length ? `${dirty.length} local edit${dirty.length === 1 ? '' : 's'} pending sync` : 'Built-in data · offline ready');
-    if (navigator.onLine) refreshSheet();
+    if (navigator.onLine) syncNow();
   } catch (error) {
     setStatus('Could not open saved data');
     $('routeList').innerHTML = `<div class="empty-state">The local list could not be opened.<br>${escapeHtml(error.message)}</div>`;

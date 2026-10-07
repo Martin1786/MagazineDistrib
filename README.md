@@ -28,3 +28,13 @@ The PWA attempts to fetch the Google Sheets CSV export. Some hosting/browser com
 The Admin/Viewer control is a local UI preview, not a secure login. Admin edits are saved on the device and tracked as pending. The public read-only Google Sheet connection can import changes from the sheet but cannot write app edits back. A secure authenticated write endpoint is needed before enabling shared Admin editing.
 
 The seed rows were transcribed from the supplied photographs. The original spreadsheet photos do not include `Updated by` or `Updated date`, so those fields start empty.
+
+## Syncing to the sheet (Apps Script)
+
+1. Open the sheet, then Extensions > Apps Script, and paste in `apps-script.gs` (set `SHEET_NAME`).
+2. Project Settings > Script properties: add `ADMIN_TOKEN` with your chosen code.
+3. Deploy > New deployment > Web app (Execute as: Me, Access: Anyone) and copy the `/exec` URL.
+4. In the app, open Settings and enter the URL, admin code and your name (or set `DEFAULT_API` in `app.js`).
+5. Press refresh once before making edits, so the sheet gets permanent ids.
+
+After editing the script, use Deploy > Manage deployments > Edit > New version. Bump `CACHE_NAME` in `sw.js` on every app release.

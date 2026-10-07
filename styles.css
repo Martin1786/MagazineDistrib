@@ -93,3 +93,5 @@ body { margin: 0; min-height: 100vh; }
   .form-columns { gap:9px; }
   .dialog form { padding:19px; }
 }
+
+.heading-actions { display:flex; gap:8px; }
