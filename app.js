@@ -1,6 +1,6 @@
 const AREAS = ['Waltham Chase', 'Shedfield', 'Shirrell Heath', 'Wickham', 'Extras'];
 const DEFAULT_SHEET = 'https://docs.google.com/spreadsheets/d/1XVUCnDLmZxF_S9SxugCNf88Tln-amZaL7c11SEnEUQI/edit?usp=sharing';
-const DEFAULT_API = ''; // paste your Apps Script /exec URL here, or enter it in Settings
+const DEFAULT_API = 'https://script.google.com/macros/s/AKfycbxWEEKvsvZGtYEYb6L41Cg4z-rXb37Rz2J2ycympa2Vc4p3hKX0aIjIRHujVzkag8g/exec'; // paste your Apps Script /exec URL here, or enter it in Settings
 const DB_NAME = 'magazine-distribution-pwa';
 const DB_VERSION = 1;
 const AREA_COLORS = { 'Waltham Chase': '#176b55', 'Shedfield': '#2563a8', 'Shirrell Heath': '#c2610c', 'Wickham': '#7b3fa0', 'Extras': '#b0396b' };
