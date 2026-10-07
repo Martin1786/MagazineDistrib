@@ -1,8 +1,9 @@
 const AREAS = ['Waltham Chase', 'Shedfield', 'Shirrell Heath', 'Wickham', 'Extras'];
 const DEFAULT_SHEET = 'https://docs.google.com/spreadsheets/d/1XVUCnDLmZxF_S9SxugCNf88Tln-amZaL7c11SEnEUQI/edit?usp=sharing';
-const DEFAULT_API = 'https://script.google.com/macros/s/AKfycbxWEEKvsvZGtYEYb6L41Cg4z-rXb37Rz2J2ycympa2Vc4p3hKX0aIjIRHujVzkag8g/exec'; // paste your Apps Script /exec URL here, or enter it in Settings
+const DEFAULT_API = ''; // paste your Apps Script /exec URL here, or enter it in Settings
 const DB_NAME = 'magazine-distribution-pwa';
 const DB_VERSION = 1;
+const AREA_COLORS = { 'Waltham Chase': '#176b55', 'Shedfield': '#2563a8', 'Shirrell Heath': '#c2610c', 'Wickham': '#7b3fa0', 'Extras': '#b0396b' };
 let db;
 let records = [];
 let selectedArea = AREAS[0];
@@ -74,11 +75,14 @@ function render() {
   $('modeIcon').textContent = admin ? '✎' : '◉';
   $('addButton').classList.toggle('hidden', !admin);
   $('newIssueButton').classList.toggle('hidden', !admin);
-  $('parishTabs').innerHTML = AREAS.map((area) => `<button class="tab ${area === selectedArea ? 'active' : ''}" data-area="${escapeHtml(area)}">${escapeHtml(area)}</button>`).join('');
+  const totalMags = records.reduce((n, r) => n + (Number(r.numberOfMags) || 0), 0);
+  $('totals').innerHTML = `<div><strong>${totalMags.toLocaleString('en-GB')}</strong><span>Total magazines</span></div><div><strong>${records.length}</strong><span>Total routes</span></div>`;
+  $('parishTabs').innerHTML = AREAS.map((area) => `<button class="tab ${area === selectedArea ? 'active' : ''}" style="--tab:${AREA_COLORS[area] || '#176b55'}" data-area="${escapeHtml(area)}">${escapeHtml(area)}</button>`).join('');
   $('parishTabs').querySelectorAll('.tab').forEach((button) => button.addEventListener('click', () => { selectedArea = button.dataset.area; render(); }));
   const filtered = records.filter((record) => record.parish === selectedArea);
   $('parishTitle').textContent = selectedArea;
-  $('routeCount').textContent = `${filtered.length} ${filtered.length === 1 ? 'route' : 'routes'}`;
+  const areaMags = filtered.reduce((n, r) => n + (Number(r.numberOfMags) || 0), 0);
+  $('routeCount').textContent = `${filtered.length} ${filtered.length === 1 ? 'route' : 'routes'} · ${areaMags.toLocaleString('en-GB')} magazines`;
   $('routeList').innerHTML = filtered.length ? `<div class="table-header"><span>Route</span><span>Distributor</span><span>Initials</span><span>Mags</span><span>Collected from church</span><span>Updated</span><span></span></div>${filtered.map(routeCard).join('')}` : '<div class="empty-state">No routes in this area yet.</div>';
   $('routeList').querySelectorAll('[data-collected]').forEach((input) => input.addEventListener('change', () => toggleCollected(input.dataset.collected, input.checked)));
   $('routeList').querySelectorAll('[data-edit]').forEach((button) => button.addEventListener('click', () => openEditor(button.dataset.edit)));
