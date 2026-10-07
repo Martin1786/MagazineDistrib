@@ -1,0 +1,55 @@
+id,Parish,Route,Distributor,Initials,Number of mags,Collected from Church,Updated by,Updated date,Issue month
+wc-001,Waltham Chase,Winchester Rd (Pubs and surrounding houses),Mrs Bostock,,16,TRUE,,,2026-10
+wc-002,Waltham Chase,Hunter's Green (RHS from Bull Lane incl older houses behind landfalls),Mrs Bostock,,45,TRUE,,,2026-10
+wc-003,Waltham Chase,Winchester Road (Rosehill to Park Rd),Mrs L Green,,53,TRUE,,,2026-10
+wc-004,Waltham Chase,Winchester Road East (after Park Rd to X roads),Mrs Spincer,,28,TRUE,,,2026-10
+wc-005,Waltham Chase,Winchester Road West (after Park Rd to X roads),Mrs Spincer,,27,TRUE,,,2026-10
+wc-006,Waltham Chase,Winchester Road West (X roads to Lower Chase Road),Nicola Gamblin,,29,TRUE,,,2026-10
+wc-007,Waltham Chase,Winchester Road East (X roads to beyond Lower Chase Road minus the first three bungalows),Delia Rampton,,16,TRUE,,,2026-10
+wc-008,Waltham Chase,Forest Gardens + the first three bungalows on the Winchester Road heading north,Lynn Jastrzebski,,17,TRUE,,,2026-10
+wc-009,Waltham Chase,Hawthorne Grove,Lynn Jastrzebski,,36,TRUE,,,2026-10
+wc-010,Waltham Chase,Bull Lane and Red Leaves,Mrs J Wood,,45,TRUE,,,2026-10
+wc-011,Waltham Chase,Little Bull Lane,Mrs Barton,,16,TRUE,,,2026-10
+wc-012,Waltham Chase,Ashley Gardens,Mr & Mrs Helsen,,35,TRUE,,,2026-10
+wc-013,Waltham Chase,Hunters Green (LHS from Bull Lane incl flats and houses facing Curdridge Lane),Mr & Mrs Helsen,,21,TRUE,,,2026-10
+wc-014,Waltham Chase,Clubhouse Lane and Poplars,Mrs J Clarke,JH,44,TRUE,,,2026-10
+wc-015,Waltham Chase,Chase Farm Close,Mrs K Shepherd,Mont,53,TRUE,,,2026-10
+wc-016,Waltham Chase,Beaucroft Road,Mr Chester,,52,TRUE,,,2026-10
+wc-017,Waltham Chase,Chase Grove minus The Gables,Mrs Jordan,,37,FALSE,,,2026-10
+wc-018,Waltham Chase,Forest Close (even nos),Mrs Simpson,,36,TRUE,,,2026-10
+wc-019,Waltham Chase,Forest Close (odd nos),Nicola Gamblin,,25,TRUE,,,2026-10
+wc-020,Waltham Chase,Linden Close,Mrs Mullen,DC,20,TRUE,,,2026-10
+wc-021,Waltham Chase,Curdridge Lane,Lesley Shawyer,,37,TRUE,,,2026-10
+wc-022,Waltham Chase,Sandy Lane,Mark Phillimore,,15,TRUE,,,2026-10
+wc-023,Waltham Chase,Forest Road,Mrs F Hargreaves,,21,TRUE,,,2026-10
+wc-024,Waltham Chase,Hornbeam Estate,Polly Stinton,,44,TRUE,,,2026-10
+sh-001,Shedfield,Church Road Winchester Rd to Sloan Pk,Monty Theobald,,49,TRUE,,,2026-10
+sh-002,Shedfield,Moorhill,Monty Theobald,,10,TRUE,,,2026-10
+sh-003,Shedfield,Church Road Sloan Pk to Botley Rd (minus Redcliffe until sold),Monty Theobald,,52,TRUE,,,2026-10
+sh-004,Shedfield,St Anne's Lane,Monty Theobald,,11,TRUE,,,2026-10
+sh-005,Shedfield,Hall Court/Row Ash Farm,Mrs J Barker,,21,TRUE,,,2026-10
+sh-006,Shedfield,Botley Road,Barry Smith,,27,TRUE,,,2026-10
+sh-007,Shedfield,Biddenfield Lane (Shedfield end first house),Barry Smith,,1,TRUE,,,2026-10
+sh-008,Shedfield,Culverlands Close,Danny Dubois,,12,TRUE,,,2026-10
+sh-009,Shedfield,Phillimore Gardens,Danny Dubois,,13,TRUE,,,2026-10
+sh-010,Shedfield,The Haven and Ivy Cottage,Karen Bird,,2,TRUE,,,2026-10
+sh-011,Shedfield,Heathlands,Karen Bird,,57,TRUE,,,2026-10
+sh-012,Shedfield,Turkey Island,Mrs Dubois,,24,TRUE,,,2026-10
+sh-013,Shedfield,Prickets Hill,Mrs B Jones,,21,TRUE,,,2026-10
+sh-014,Shedfield,"Upper Church Road (incl two cottages behind Stacey's)",Monty Theobald,,15,TRUE,,,2026-10
+sh-015,Shedfield,Sandy Lane (bottom end from Sandy Acres),Mr Phillimore,,10,TRUE,,,2026-10
+sh-016,Shedfield,Winchester Road East side incl Culverlands Industrial (also two cottages behind Culverlands Cottages and Suncourt behind Denver),Monty Theobald,,25,TRUE,,,2026-10
+sh-017,Shedfield,Winchester Road West,Monty Theobald,,4,TRUE,,,2026-10
+she-001,Shirrell Heath,Twynhams Hill to Nightingale Crescent,Mr D Dubois,,16,TRUE,,,2026-10
+she-002,Shirrell Heath,High Street (New Place to chapel),Mr I Mears,,52,TRUE,,,2026-10
+she-003,Shirrell Heath,High Street (Chapel to x roads and Blackhorse Lane (from main road to but not including Santana)),Mrs Golding,,61,TRUE,,,2026-10
+she-004,Shirrell Heath,Gravel Hill,Mrs Heasell,,12,FALSE,,,2026-10
+she-005,Shirrell Heath,Solomon's Lane (X roads to Oak Tree Cottage) and Smith Lane and Blackhorse Lane to Santana,Mrs Edgeley,DD,45,TRUE,,,2026-10
+she-006,Shirrell Heath,Hospital Road and Bishop's Lane,Mr D Dubois,,46,TRUE,,,2026-10
+she-007,Shirrell Heath,Winters Road,Mr P Yeoman,,14,FALSE,,,2026-10
+she-008,Shirrell Heath,Twynhams Hill main road to house before 2 Winters Croft; 2 Winters Croft to Hospital Road,Robbie Banks; Mrs Goodall,,46,TRUE,,,2026-10
+wk-001,Wickham,"St Nicholas Church, Wickham",Mr R Goulsen,,10,TRUE,,,2026-10
+ex-001,Extras,"St Barnabas, Swanmore (and bring back 5 of their magazine)",,,5,FALSE,,,2026-10
+ex-002,Extras,Shedfield Parish Council Office,,,3,TRUE,,,2026-10
+ex-003,Extras,New Place,,,5,FALSE,,,2026-10
+ex-004,Extras,Meon Valley Hotel,,,5,FALSE,,,2026-10
