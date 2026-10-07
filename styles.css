@@ -105,7 +105,7 @@ body { margin: 0; min-height: 100vh; }
 
 .print-sheet { display:none; }
 @media print {
-  @page { size:A4 portrait; margin:12mm; }
+  @page { size:A4 landscape; margin:12mm; }
   body > *:not(#printSheet) { display:none !important; }
   body { background:#fff; }
   .print-sheet { display:block; color:#000; font:12px system-ui,sans-serif; }
@@ -119,4 +119,17 @@ body { margin: 0; min-height: 100vh; }
   .print-sheet td.box { text-align:center; font-size:17px; width:80px; }
   .print-sheet tfoot td { font-weight:700; background:#f5f5f5; }
   .print-sheet td:last-child { width:22%; }
+}
+@media print {
+  .print-sheet table { table-layout:fixed; width:100%; }
+  .print-sheet th, .print-sheet td { overflow-wrap:anywhere; word-break:break-word; font-size:11px; padding:5px 6px; }
+  .print-sheet th:nth-child(1) { width:34%; }
+  .print-sheet th:nth-child(2) { width:15%; }
+  .print-sheet th:nth-child(3) { width:7%; }
+  .print-sheet th:nth-child(4) { width:6%; }
+  .print-sheet th:nth-child(5) { width:9%; }
+  .print-sheet th:nth-child(6) { width:8%; }
+  .print-sheet th:nth-child(7) { width:21%; }
+  .print-sheet td.box { width:auto; }
+  .print-sheet td:last-child { width:auto; }
 }
