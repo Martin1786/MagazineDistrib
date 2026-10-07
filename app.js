@@ -157,6 +157,15 @@ async function submitRecord(event) {
   showToast('Saved on this device.');
 }
 
+function printArea() {
+  const rows = records.filter((r) => r.parish === selectedArea);
+  const mags = rows.reduce((n, r) => n + (Number(r.numberOfMags) || 0), 0);
+  const printed = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
+  const body = rows.map((r) => `<tr><td>${escapeHtml(r.route)}</td><td>${escapeHtml(r.distributor || '')}</td><td>${escapeHtml(r.initials || '')}</td><td class="num">${Number(r.numberOfMags) || 0}</td><td class="box">${r.collectedFromChurch ? '☑' : '☐'}</td><td class="box">☐</td><td></td></tr>`).join('');
+  $('printSheet').innerHTML = `<h1>${escapeHtml(selectedArea)}</h1><p class="print-meta">Magazine distribution log · ${monthLabel(rows[0]?.issueMonth || records[0]?.issueMonth)} · ${rows.length} ${rows.length === 1 ? 'route' : 'routes'} · ${mags} magazines · Printed ${printed}</p><table><thead><tr><th>Route</th><th>Distributor</th><th>Initials</th><th>Mags</th><th>Collected from church</th><th>Delivered</th><th>Notes</th></tr></thead><tbody>${body}</tbody><tfoot><tr><td colspan="3">Total</td><td class="num">${mags}</td><td colspan="3"></td></tr></tfoot></table>`;
+  window.print();
+}
+
 function sheetCsvUrl(link) {
   const parsed = new URL(link);
   const match = parsed.pathname.match(/\/spreadsheets\/d\/([\w-]+)/);
@@ -335,6 +344,7 @@ async function openSettings() {
 function bindEvents() {
   $('refreshButton').addEventListener('click', syncNow);
   $('newIssueButton').addEventListener('click', newIssue);
+  $('printButton').addEventListener('click', printArea);
   $('settingsButton').addEventListener('click', openSettings);
   $('addButton').addEventListener('click', () => openEditor());
   $('modeButton').addEventListener('click', () => {
