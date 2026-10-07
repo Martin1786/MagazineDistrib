@@ -1,5 +1,5 @@
-const CACHE_NAME = 'magazine-distribution-v4'; // bump this on every release
-const APP_FILES = ['./', './index.html', './styles.css', './app.js', './manifest.webmanifest', './assets/icon.svg', './assets/magazine-distribution-seed.json'];
+const CACHE_NAME = 'magazine-distribution-v5'; // bump this on every release
+const APP_FILES = ['./', './index.html', './styles.css', './app.js', './config.js', './manifest.webmanifest', './assets/icon.svg', './assets/magazine-distribution-seed.json'];
 
 self.addEventListener('install', (event) => {
   // add files one by one so a single missing file doesn't block installation
