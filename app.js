@@ -349,6 +349,7 @@ async function openSettings() {
 function bindEvents() {
   $('refreshButton').addEventListener('click', syncNow);
   $('newIssueButton').addEventListener('click', newIssue);
+  bindMapEvents();
   $('printButton').addEventListener('click', printArea);
   $('settingsButton').addEventListener('click', openSettings);
   $('addButton').addEventListener('click', () => openEditor());
@@ -401,6 +402,75 @@ async function start() {
     setStatus('Could not open saved data');
     $('routeList').innerHTML = `<div class="empty-state">The local list could not be opened.<br>${escapeHtml(error.message)}</div>`;
   }
+}
+
+// ---- Parish map (Leaflet + OpenStreetMap data, loaded the first time the panel opens) ----
+const LEAFLET = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/';
+// Approximate village centres [lat, lng]. Adjust these if a pin is in the wrong place.
+const VILLAGES = {
+  'Waltham Chase': [50.9468, -1.2078],
+  'Shedfield': [50.9340, -1.2370],
+  'Shirrell Heath': [50.9365, -1.2145],
+  'Wickham': [50.8960, -1.1830]
+};
+let map, leafletLoading;
+
+function loadLeaflet() {
+  if (window.L) return Promise.resolve();
+  if (leafletLoading) return leafletLoading;
+  leafletLoading = new Promise((resolve, reject) => {
+    const css = document.createElement('link');
+    css.rel = 'stylesheet'; css.href = `${LEAFLET}leaflet.min.css`; css.crossOrigin = 'anonymous';
+    document.head.appendChild(css);
+    const js = document.createElement('script');
+    js.src = `${LEAFLET}leaflet.min.js`; js.crossOrigin = 'anonymous'; js.onload = resolve;
+    js.onerror = () => { leafletLoading = null; reject(new Error('The map needs an internet connection the first time it is opened.')); };
+    document.head.appendChild(js);
+  });
+  return leafletLoading;
+}
+
+async function buildMap() {
+  map = L.map('map');
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 19, attribution: '&copy; OpenStreetMap contributors &copy; CARTO' }).addTo(map);
+  const entries = Object.entries(VILLAGES);
+  for (const [area, latlng] of entries) {
+    const icon = L.divIcon({ className: 'map-pin-wrap', iconSize: [0, 0], html: `<span class="map-pin" style="--c:${AREA_COLORS[area] || '#176b55'}">${escapeHtml(area)}</span>` });
+    L.marker(latlng, { icon }).addTo(map).on('click', () => { selectedArea = area; render(); closeMap(); });
+  }
+  map.fitBounds(L.latLngBounds(entries.map(([, latlng]) => latlng)), { padding: [50, 50] });
+  // Optional area outlines: features with properties { area, name } (and later routeId) in assets/areas.geojson
+  try {
+    const res = await fetch('assets/areas.geojson');
+    const gj = res.ok ? await res.json() : null;
+    if (gj?.features?.length) L.geoJSON(gj, { style: (f) => ({ color: AREA_COLORS[f.properties?.area] || '#555', weight: 2, fillOpacity: 0.12 }), onEachFeature: (f, layer) => { if (f.properties?.name) layer.bindTooltip(f.properties.name); } }).addTo(map);
+  } catch { /* outlines are optional */ }
+}
+
+async function openMap() {
+  $('mapPanel').classList.add('open');
+  $('mapPanel').setAttribute('aria-hidden', 'false');
+  $('mapBackdrop').classList.add('show');
+  try { await loadLeaflet(); } catch (error) { $('mapMessage').textContent = error.message; $('mapMessage').classList.remove('hidden'); return; }
+  $('mapMessage').classList.add('hidden');
+  if (!map) await buildMap();
+  setTimeout(() => map.invalidateSize(), 280);
+}
+
+function closeMap() {
+  $('mapPanel').classList.remove('open');
+  $('mapPanel').setAttribute('aria-hidden', 'true');
+  $('mapBackdrop').classList.remove('show');
+}
+
+function bindMapEvents() {
+  $('mapButton').addEventListener('click', openMap);
+  $('mapClose').addEventListener('click', closeMap);
+  $('mapBackdrop').addEventListener('click', closeMap);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMap(); });
+  let startX = null, startY = 0; // optional swipe in from the left screen edge
+  document.addEventListener('touchstart', (e) => { const t = e.touches[0]; startX = t.clientX < 24 ? t.clientX : null; startY = t.clientY; }, { passive: true });
+  document.addEventListener('touchend', (e) => { if (startX === null) return; const t = e.changedTouches[0]; if (t.clientX - startX > 70 && Math.abs(t.clientY - startY) < 60) openMap(); startX = null; }, { passive: true });
 }
 
 if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));

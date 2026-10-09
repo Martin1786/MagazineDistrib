@@ -15,6 +15,7 @@
   <header class="topbar">
     <a class="brand" href="./" aria-label="Magazine distribution home"><span class="brand-mark">M</span><span>Magazine distribution</span></a>
     <div class="top-actions">
+      <button id="mapButton" class="icon-button" title="Parish map" aria-label="Parish map">🗺</button>
       <button id="refreshButton" class="icon-button" title="Refresh from sheet" aria-label="Refresh from sheet">↻</button>
       <button id="settingsButton" class="icon-button" title="Sheet settings" aria-label="Sheet settings">⚙</button>
       <button id="modeButton" class="mode-button"><span id="modeIcon">◉</span><span id="modeLabel">Viewer</span><span class="chevron">⌄</span></button>
@@ -58,6 +59,12 @@
       <div class="dialog-actions"><button id="builtInButton" class="quiet-button" value="builtin">Use built-in data</button><button id="saveSettingsButton" class="primary-button" value="save">Save link</button></div>
     </form>
   </dialog>
+  <div id="mapBackdrop" class="map-backdrop"></div>
+  <aside id="mapPanel" class="map-panel" aria-label="Parish map" aria-hidden="true">
+    <div class="map-head"><strong>Parish map</strong><button id="mapClose" class="icon-button close-button" aria-label="Close map">×</button></div>
+    <p id="mapMessage" class="fine-print hidden"></p>
+    <div id="map"></div>
+  </aside>
   <div id="printSheet" class="print-sheet" aria-hidden="true"></div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="config.js"></script>

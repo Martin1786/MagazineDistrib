@@ -136,3 +136,13 @@ body { margin: 0; min-height: 100vh; }
 
 .dialog input:disabled { background:#f3f6f4; color:#8a9791; cursor:not-allowed; }
 .dialog button:disabled { opacity:.45; cursor:not-allowed; }
+
+.map-backdrop { position:fixed; inset:0; background:#14251d80; opacity:0; pointer-events:none; transition:opacity .25s; z-index:20; }
+.map-backdrop.show { opacity:1; pointer-events:auto; }
+.map-panel { position:fixed; top:0; bottom:0; left:0; width:min(440px,92vw); background:#fff; z-index:21; display:flex; flex-direction:column; transform:translateX(-103%); transition:transform .25s; box-shadow:0 0 40px #11281d40; }
+.map-panel.open { transform:none; }
+.map-head { display:flex; align-items:center; justify-content:space-between; padding:10px 8px 10px 16px; border-bottom:1px solid var(--line); }
+.map-panel .fine-print { padding:10px 16px; }
+#map { flex:1; min-height:0; background:#e9eeeb; }
+.map-pin-wrap { background:none; border:0; }
+.map-pin { display:inline-block; transform:translate(-50%,-50%); background:var(--c); color:#fff; padding:4px 10px; border-radius:999px; font:700 12px system-ui,sans-serif; white-space:nowrap; box-shadow:0 2px 8px #0004; cursor:pointer; }

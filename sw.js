@@ -1,5 +1,5 @@
 const CACHE_NAME = 'magazine-distribution-v9'; // bump this on every release
-const APP_FILES = ['./', './index.html', './styles.css', './app.js', './config.js', './manifest.webmanifest', './assets/icon.svg', './assets/magazine-distribution-seed.json'];
+const APP_FILES = ['./', './index.html', './styles.css', './app.js', './config.js', './assets/areas.geojson', './manifest.webmanifest', './assets/icon.svg', './assets/magazine-distribution-seed.json'];
 
 self.addEventListener('install', (event) => {
   // add files one by one so a single missing file doesn't block installation
@@ -13,7 +13,8 @@ self.addEventListener('activate', (event) => {
 // Stale-while-revalidate: instant from cache, refreshed in the background for next time
 self.addEventListener('fetch', (event) => {
   const req = event.request;
-  if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  const host = new URL(req.url);
+  if (req.method !== 'GET' || (host.origin !== self.location.origin && host.hostname !== 'cdnjs.cloudflare.com')) return;
   event.respondWith(caches.open(CACHE_NAME).then(async (cache) => {
     const cached = await cache.match(req, { ignoreSearch: true }) || (req.mode === 'navigate' ? await cache.match('./index.html') : undefined);
     const network = fetch(req).then((res) => { if (res.ok) cache.put(req, res.clone()); return res; }).catch(() => cached);
