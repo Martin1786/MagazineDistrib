@@ -406,13 +406,14 @@ async function start() {
 
 // ---- Parish map (Leaflet + OpenStreetMap data, loaded the first time the panel opens) ----
 const LEAFLET = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/';
-// Approximate village centres [lat, lng]. Adjust these if a pin is in the wrong place.
-const VILLAGES = {
+// Built-in village centres [lat, lng]. To adjust them, define VILLAGE_LOCATIONS in config.js instead.
+const VILLAGE_DEFAULTS = {
   'Waltham Chase': [50.9350, -1.1995],
   'Shedfield': [50.9130, -1.2150],
   'Shirrell Heath': [50.9225, -1.1900],
   'Wickham': [50.9005, -1.1835]
 };
+const VILLAGES = typeof VILLAGE_LOCATIONS === 'undefined' ? VILLAGE_DEFAULTS : VILLAGE_LOCATIONS;
 let map, leafletLoading;
 
 function loadLeaflet() {
