@@ -432,7 +432,9 @@ function loadLeaflet() {
 
 async function buildMap() {
   map = L.map('map');
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 19, attribution: '&copy; OpenStreetMap contributors &copy; CARTO' }).addTo(map);
+  const streets = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+  const grey = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', { maxNativeZoom: 16, maxZoom: 19, attribution: 'Tiles &copy; Esri' });
+  L.control.layers({ 'Streets': streets, 'Light grey': grey }, null, { position: 'topright', collapsed: true }).addTo(map);
   const entries = Object.entries(VILLAGES);
   for (const [area, latlng] of entries) {
     const icon = L.divIcon({ className: 'map-pin-wrap', iconSize: [0, 0], html: `<span class="map-pin" style="--c:${AREA_COLORS[area] || '#176b55'}">${escapeHtml(area)}</span>` });
