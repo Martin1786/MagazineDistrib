@@ -408,10 +408,10 @@ async function start() {
 const LEAFLET = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/';
 // Approximate village centres [lat, lng]. Adjust these if a pin is in the wrong place.
 const VILLAGES = {
-  'Waltham Chase': [50.9468, -1.2078],
-  'Shedfield': [50.9340, -1.2370],
-  'Shirrell Heath': [50.9365, -1.2145],
-  'Wickham': [50.8960, -1.1830]
+  'Waltham Chase': [50.9350, -1.1995],
+  'Shedfield': [50.9130, -1.2150],
+  'Shirrell Heath': [50.9225, -1.1900],
+  'Wickham': [50.9005, -1.1835]
 };
 let map, leafletLoading;
 
