@@ -50,6 +50,8 @@ function getAll(store) {
 
 async function initialize() {
   db = await openDatabase();
+  const savedMeta = (await getAll('meta')).find((m) => m.key === 'distributors');
+  if (savedMeta) distributors = new Map(savedMeta.value.map((d) => [d.id, d.name]));
   const existing = await getAll('records');
   if (!existing.length) {
     const response = await fetch('assets/magazine-distribution-seed.json');
@@ -91,7 +93,7 @@ function render() {
 }
 
 function routeCard(record) {
-  const who = record.distributor || 'No distributor';
+  const who = record.distributor ? distName(record.distributor) : 'No distributor';
   const initials = record.initials || '—';
   const collected = record.collectedFromChurch ? 'checked' : '';
   const updated = record.updatedDate ? `Updated by ${escapeHtml(record.updatedBy || '—')} · ${formatDate(record.updatedDate)}` : 'Not updated yet';
@@ -137,7 +139,7 @@ function openEditor(id = null) {
   $('recordParish').innerHTML = AREAS.map((area) => `<option>${escapeHtml(area)}</option>`).join('');
   $('recordParish').value = record?.parish || selectedArea;
   $('recordRoute').value = record?.route || '';
-  $('recordDistributor').value = record?.distributor || '';
+  fillDistributorOptions(record?.distributor || '');
   $('recordInitials').value = record?.initials || '';
   $('recordCount').value = record?.numberOfMags ?? '';
   $('recordCollected').checked = record?.collectedFromChurch ?? false;
@@ -158,11 +160,26 @@ async function submitRecord(event) {
   showToast('Saved on this device.');
 }
 
+let distributors = new Map(), pendingDistributors = null;
+const distName = (value) => distributors.get(value) || value;
+
+async function saveDistributors(list) {
+  distributors = new Map(list.map((d) => [d.id, d.name]));
+  await transaction('meta', 'readwrite', (store) => store.put({ key: 'distributors', value: list }));
+}
+
+function fillDistributorOptions(current) {
+  const options = [['', '— none —'], ...[...distributors].sort((a, b) => a[1].localeCompare(b[1]))];
+  if (current && !distributors.has(current)) options.push([current, current]);
+  $('recordDistributor').innerHTML = options.map(([value, text]) => `<option value="${escapeHtml(value)}">${escapeHtml(text)}</option>`).join('');
+  $('recordDistributor').value = current || '';
+}
+
 function printArea() {
   const rows = records.filter((r) => r.parish === selectedArea);
   const mags = rows.reduce((n, r) => n + (Number(r.numberOfMags) || 0), 0);
   const printed = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
-  const body = rows.map((r) => `<tr><td>${escapeHtml(r.route)}</td><td>${escapeHtml(r.distributor || '')}</td><td>${escapeHtml(r.initials || '')}</td><td class="num">${Number(r.numberOfMags) || 0}</td><td class="box">${r.collectedFromChurch ? '☑' : '☐'}</td><td class="box">☐</td><td></td></tr>`).join('');
+  const body = rows.map((r) => `<tr><td>${escapeHtml(r.route)}</td><td>${escapeHtml(distName(r.distributor || ''))}</td><td>${escapeHtml(r.initials || '')}</td><td class="num">${Number(r.numberOfMags) || 0}</td><td class="box">${r.collectedFromChurch ? '☑' : '☐'}</td><td class="box">☐</td><td></td></tr>`).join('');
   $('printSheet').innerHTML = `<h1>${escapeHtml(selectedArea)}</h1><p class="print-meta">Magazine distribution log · ${monthLabel(rows[0]?.issueMonth || records[0]?.issueMonth)} · ${rows.length} ${rows.length === 1 ? 'route' : 'routes'} · ${mags} magazines · Printed ${printed}</p><table><thead><tr><th>Route</th><th>Distributor</th><th>Initials</th><th>Mags</th><th>Collected from church</th><th>Delivered</th><th>Notes</th></tr></thead><tbody>${body}</tbody><tfoot><tr><td colspan="3">Total</td><td class="num">${mags}</td><td colspan="3"></td></tr></tfoot></table>`;
   window.print();
 }
@@ -226,6 +243,7 @@ async function fetchRemote() {
   const res = await fetch(apiUrl(), { cache: 'no-store' });
   const data = await res.json();
   if (!data.ok) throw new Error(data.error || 'Script error');
+  pendingDistributors = Array.isArray(data.distributors) ? data.distributors : null;
   return data.rows.map((r, i) => ({
     id: String(r.id), parish: String(r.parish).trim(), route: String(r.route).trim(),
     distributor: String(r.distributor || '').trim(), initials: String(r.initials || '').trim(),
@@ -256,6 +274,7 @@ async function refreshSheet() {
       store.put(item);
     }
     await new Promise((resolve, reject) => { tx.oncomplete = resolve; tx.onerror = () => reject(tx.error); });
+    if (pendingDistributors) await saveDistributors(pendingDistributors);
     await reload();
     setStatus(`Sheet refreshed · ${remote.length} rows${outbox.length ? ` · ${outbox.length} local edits pending` : ''}`);
     showToast(`Imported ${remote.length} rows from the sheet.`);
