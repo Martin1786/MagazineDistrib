@@ -146,3 +146,6 @@ body { margin: 0; min-height: 100vh; }
 #map { flex:1; min-height:0; background:#e9eeeb; }
 .map-pin-wrap { background:none; border:0; }
 .map-pin { display:inline-block; transform:translate(-50%,-50%); background:var(--c); color:#fff; padding:4px 10px; border-radius:999px; font:700 12px system-ui,sans-serif; white-space:nowrap; box-shadow:0 2px 8px #0004; cursor:pointer; }
+
+.map-link { border:0; background:transparent; cursor:pointer; font-size:14px; padding:0 3px; vertical-align:baseline; }
+.map-head strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-right:8px; font-size:14px; }

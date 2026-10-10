@@ -52,6 +52,8 @@ async function initialize() {
   db = await openDatabase();
   const savedMeta = (await getAll('meta')).find((m) => m.key === 'distributors');
   if (savedMeta) distributors = new Map(savedMeta.value.map((d) => [d.id, d.name]));
+  const rsMeta = (await getAll('meta')).find((m) => m.key === 'routeStreets');
+  if (rsMeta) routeStreets = rsMeta.value;
   const existing = await getAll('records');
   if (!existing.length) {
     const response = await fetch('assets/magazine-distribution-seed.json');
@@ -90,6 +92,7 @@ function render() {
   $('routeList').querySelectorAll('[data-collected]').forEach((input) => input.addEventListener('change', () => toggleCollected(input.dataset.collected, input.checked)));
   $('routeList').querySelectorAll('[data-edit]').forEach((button) => button.addEventListener('click', () => openEditor(button.dataset.edit)));
   $('routeList').querySelectorAll('[data-delete]').forEach((button) => button.addEventListener('click', () => deleteRecord(button.dataset.delete)));
+  $('routeList').querySelectorAll('[data-map]').forEach((button) => button.addEventListener('click', () => showRouteOnMap(button.dataset.map)));
 }
 
 function routeCard(record) {
@@ -97,7 +100,7 @@ function routeCard(record) {
   const initials = record.initials || '—';
   const collected = record.collectedFromChurch ? 'checked' : '';
   const updated = record.updatedDate ? `Updated by ${escapeHtml(record.updatedBy || '—')} · ${formatDate(record.updatedDate)}` : 'Not updated yet';
-  return `<article class="route-card"><div class="route-name">${escapeHtml(record.route)}</div><div class="person-row">${escapeHtml(who)}</div><div class="initials">${escapeHtml(initials)}</div><div class="mags">${Number(record.numberOfMags) || 0}</div><label class="collection"><input type="checkbox" data-collected="${escapeHtml(record.id)}" ${collected} ${admin ? '' : 'disabled'}><span>Collected from church</span></label><span class="updated">${updated}</span>${admin ? `<span class="row-actions"><button aria-label="Edit route" title="Edit" data-edit="${escapeHtml(record.id)}">✎</button><button aria-label="Delete route" title="Delete" data-delete="${escapeHtml(record.id)}">⌫</button></span>` : '<span></span>'}</article>`;
+  return `<article class="route-card"><div class="route-name">${escapeHtml(record.route)}${routeStreets.some((rs) => rs.routeId === record.id) ? ` <button class="map-link" data-map="${escapeHtml(record.id)}" aria-label="Show on map" title="Show on map">📍</button>` : ''}</div><div class="person-row">${escapeHtml(who)}</div><div class="initials">${escapeHtml(initials)}</div><div class="mags">${Number(record.numberOfMags) || 0}</div><label class="collection"><input type="checkbox" data-collected="${escapeHtml(record.id)}" ${collected} ${admin ? '' : 'disabled'}><span>Collected from church</span></label><span class="updated">${updated}</span>${admin ? `<span class="row-actions"><button aria-label="Edit route" title="Edit" data-edit="${escapeHtml(record.id)}">✎</button><button aria-label="Delete route" title="Delete" data-delete="${escapeHtml(record.id)}">⌫</button></span>` : '<span></span>'}</article>`;
 }
 
 function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]); }
@@ -160,12 +163,17 @@ async function submitRecord(event) {
   showToast('Saved on this device.');
 }
 
-let distributors = new Map(), pendingDistributors = null;
+let distributors = new Map(), pendingDistributors = null, routeStreets = [], pendingRouteStreets = null;
 const distName = (value) => distributors.get(value) || value;
 
 async function saveDistributors(list) {
   distributors = new Map(list.map((d) => [d.id, d.name]));
   await transaction('meta', 'readwrite', (store) => store.put({ key: 'distributors', value: list }));
+}
+
+async function saveRouteStreets(list) {
+  routeStreets = list;
+  await transaction('meta', 'readwrite', (store) => store.put({ key: 'routeStreets', value: list }));
 }
 
 function fillDistributorOptions(current) {
@@ -244,6 +252,7 @@ async function fetchRemote() {
   const data = await res.json();
   if (!data.ok) throw new Error(data.error || 'Script error');
   pendingDistributors = Array.isArray(data.distributors) ? data.distributors : null;
+  pendingRouteStreets = Array.isArray(data.routeStreets) ? data.routeStreets : null;
   return data.rows.map((r, i) => ({
     id: String(r.id), parish: String(r.parish).trim(), route: String(r.route).trim(),
     distributor: String(r.distributor || '').trim(), initials: String(r.initials || '').trim(),
@@ -275,6 +284,7 @@ async function refreshSheet() {
     }
     await new Promise((resolve, reject) => { tx.oncomplete = resolve; tx.onerror = () => reject(tx.error); });
     if (pendingDistributors) await saveDistributors(pendingDistributors);
+    if (pendingRouteStreets) await saveRouteStreets(pendingRouteStreets);
     await reload();
     setStatus(`Sheet refreshed · ${remote.length} rows${outbox.length ? ` · ${outbox.length} local edits pending` : ''}`);
     showToast(`Imported ${remote.length} rows from the sheet.`);
@@ -452,6 +462,7 @@ function loadLeaflet() {
 
 async function buildMap() {
   map = L.map('map');
+  map.attributionControl.addAttribution('Contains OS data &copy; Crown copyright and database right');
   const streets = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
   const grey = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', { maxNativeZoom: 16, maxZoom: 19, attribution: 'Tiles &copy; Esri' });
   L.control.layers({ 'Streets': streets, 'Light grey': grey }, null, { position: 'topright', collapsed: true }).addTo(map);
@@ -467,6 +478,42 @@ async function buildMap() {
     const gj = res.ok ? await res.json() : null;
     if (gj?.features?.length) L.geoJSON(gj, { style: (f) => ({ color: AREA_COLORS[f.properties?.area] || '#555', weight: 2, fillOpacity: 0.12 }), onEachFeature: (f, layer) => { if (f.properties?.name) layer.bindTooltip(f.properties.name); } }).addTo(map);
   } catch { /* outlines are optional */ }
+}
+
+let streetFeatures = null, routeLayer = null;
+
+async function loadStreets() {
+  if (streetFeatures) return;
+  try {
+    const res = await fetch('assets/streets.geojson');
+    const gj = res.ok ? await res.json() : null;
+    streetFeatures = new Map((gj?.features || []).map((f) => [f.properties.streetId, f]));
+  } catch { streetFeatures = new Map(); }
+}
+
+function clearRoute() {
+  if (routeLayer) { routeLayer.remove(); routeLayer = null; }
+  $('mapTitle').textContent = 'Parish map';
+  $('mapCaption').classList.add('hidden');
+}
+
+async function showRouteOnMap(routeId) {
+  clearRoute();
+  await openMap();
+  if (!map) return;
+  await loadStreets();
+  const record = records.find((r) => r.id === routeId);
+  const links = routeStreets.filter((rs) => rs.routeId === routeId);
+  const feats = links.map((rs) => streetFeatures.get(rs.streetId)).filter(Boolean);
+  if (!feats.length) { showToast('No map lines found for this route yet.'); return; }
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  map.invalidateSize();
+  routeLayer = L.geoJSON({ type: 'FeatureCollection', features: feats }, { style: { color: AREA_COLORS[record?.parish] || '#176b55', weight: 6, opacity: 0.9 }, onEachFeature: (f, layer) => layer.bindTooltip(f.properties.name) }).addTo(map);
+  map.fitBounds(routeLayer.getBounds(), { padding: [40, 40], maxZoom: 17 });
+  $('mapTitle').textContent = record?.route || 'Route';
+  const notes = links.filter((rs) => rs.coverage).map((rs) => `${streetFeatures.get(rs.streetId)?.properties.name || rs.streetId}: ${rs.coverage}`);
+  $('mapCaption').textContent = notes.join(' · ');
+  $('mapCaption').classList.toggle('hidden', !notes.length);
 }
 
 async function openMap() {
@@ -486,7 +533,7 @@ function closeMap() {
 }
 
 function bindMapEvents() {
-  $('mapButton').addEventListener('click', openMap);
+  $('mapButton').addEventListener('click', () => { clearRoute(); openMap(); });
   $('mapClose').addEventListener('click', closeMap);
   $('mapBackdrop').addEventListener('click', closeMap);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMap(); });
